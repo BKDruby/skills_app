@@ -23,7 +23,7 @@ module Api
     end
 
     def admin?
-      current_user.admin?
+      current_user&.admin?
     end
 
     def not_admin?

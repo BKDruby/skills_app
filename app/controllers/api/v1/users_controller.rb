@@ -4,21 +4,26 @@ module Api
   module V1
     # Users controller
     class UsersController < ProtectedController
+      skip_before_action :authenticate, only: [:create, :index]
+
       PROFILE_ATTRIBUTES_LIST = %w[first_name last_name phone].freeze
       VALID_QUERY_PROFILE_FIELDS = %w(first_name last_name).freeze
       USER_DISPLAY_ATTRIBUTES_LIST = %w[id email].freeze
         
       include Orderable
 
-      before_action :authenticate
       before_action :check_permissions, only: [:create, :destroy]
       before_action :access_to_foreign_resources, only: [:update, :show]
       before_action :set_user, only: [:update, :show, :destroy]
 
       # GET /api/v1/users
       def index
-        users_scope = admin? ? users_collection.all : users_collection.client
-        render json: users_scope.map { |u| cat_list_attributes(u) }, status: :ok
+        # users_scope = admin? ? users_collection.all : users_collection.client
+        # render json: users_scope.map { |u| cat_list_attributes(u) }, status: :ok
+        headers['Access-Control-Allow-Origin'] = '*'
+        headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+        headers['Access-Control-Allow-Headers'] = '*'
+        render json: User.all
       rescue => e
         log_and_render_users_controller_error(e, "display list of users failed")
       end
@@ -97,7 +102,7 @@ module Api
       end
 
       def check_permissions
-        render_not_allowed && return unless admin?
+        render_not_allowed && return unless current_user.blank? || admin?
       end
 
       def access_to_foreign_resources
@@ -141,7 +146,7 @@ module Api
 
       def log_and_render_users_controller_error(e, message)
         log_error(e, "[Api::V1::Users::UsersController] #{message}. " \
-                     "User id: #{current_user.id}, params: #{params.inspect}")
+                     "User id: #{current_user&.id}, params: #{params.inspect}")
         render_error(e)
       end
 
